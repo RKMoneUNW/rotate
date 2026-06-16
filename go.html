@@ -74,10 +74,13 @@
                     } else if (cmd === 'Y') {
                         r_ang -= 90;
                         parsedTexts.push("右旋(-90°)");
-                    } else if (cmd === 'D') {
+                    } 
+                    /* else if (cmd === 'D') {
                         r_ang += 180;
-                        parsedTexts.push("倒置(+180°)");
-                    } else if (cmd === 'F') {
+                        parsedTexts.push("倒置(+180°)"); 
+                    } 
+                    */
+                    else if (cmd === 'F') {
                         r_flip = r_flip === 1 ? 0 : 1; 
                         parsedTexts.push("垂直翻转");
                     } else if (cmd === '¥') {
