@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>全景制式叠加中转器</title>
+</head>
+<body>
+    <div style="padding: 20px; font-family: sans-serif; color: #666; text-align: center; margin-top: 20vh;">
+        <h2>正在解析复合制式并加载网页...</h2>
+        <p id="tip" style="font-size: 14px; color: #999; margin-top: 10px; white-space: pre-line; line-height: 1.6;"></p>
+    </div>
+
+    <script>
+        (function() {
+            const searchStr = window.location.search;
+            if (!searchStr) {
+                window.location.href = "./index.html";
+                return;
+            }
+            const decodedSearch = decodeURIComponent(searchStr);
+
+            // 1. 采用更包容的正则：匹配 ?=后面一串字母和符号，直到 & 符号出现为止
+            // 例如匹配：?=DF&https:mihoyo.com 或 ?=ZD&www.baidu.com
+            const match = decodedSearch.match(/^\?=([A-Z¥]+)&(.*)$/i);
+
+            if (match) {
+                const commands = match[1].toUpperCase(); // 拿到的可能是组合，比如 "DF", "ZD", "F"
+                let targetUrl = match[2];
+
+                // 2. 补全或修复 https 协议
+                if (!/^https?:\/\//i.test(targetUrl)) {
+                    if (/^https?:/i.test(targetUrl)) {
+                        targetUrl = targetUrl.replace(/^https?:/i, 'https://');
+                    } else {
+                        targetUrl = 'https://' + targetUrl;
+                    }
+                }
+
+                // 3. 初始寄存器（开始累加几何变换）
+                let r_ang = 0;
+                let r_flip = 0;
+                let parsedTexts = [];
+
+                // 4. 核心：逐个字符扫描，允许无限叠加
+                for (let i = 0; i < commands.length; i++) {
+                    const cmd = commands[i];
+                    if (cmd === 'Z') {
+                        r_ang += 90;
+                        parsedTexts.push("左旋(+90°)");
+                    } else if (cmd === 'Y') {
+                        r_ang -= 90;
+                        parsedTexts.push("右旋(-90°)");
+                    } else if (cmd === 'D') {
+                        r_ang += 180;
+                        parsedTexts.push("倒置(+180°)");
+                    } else if (cmd === 'F') {
+                        // 翻转状态直接取反 (0变1，1变0)，这意味着如果连续输入两个FF就等于恢复原样
+                        r_flip = r_flip === 1 ? 0 : 1; 
+                        parsedTexts.push("垂直翻转");
+                    } else if (cmd === '¥') {
+                        r_ang = 0;
+                        r_flip = 0;
+                        parsedTexts.push("强制复位原样");
+                    }
+                }
+
+                // 计算出最终的标准映射角度
+                r_ang = (r_ang % 360 + 360) % 360;
+
+                // 在界面上显示解析日志
+                document.getElementById('tip').textContent = 
+                    `动作叠加：${parsedTexts.join(' ➔ ')}\n最终状态：角度 ${r_ang}° / 翻转 ${r_flip === 1 ? '开' : '关'}\n目标网页：${targetUrl}`;
+
+                // 5. 带着累加完的最终状态数据，精准无缝跳转到主程序 index.html
+                window.location.href = `./index.html?ang=${r_ang}&flip=${r_flip}&url=${encodeURIComponent(targetUrl)}`;
+            } else {
+                // 如果格式不对，直接当成普通网址传给主页
+                const plainUrl = decodedSearch.substring(1);
+                if (plainUrl) {
+                    window.location.href = `./index.html?url=${encodeURIComponent(plainUrl)}`;
+                } else {
+                    window.location.href = "./index.html";
+                }
+            }
+        })();
+    </script>
+</body>
+</html>
