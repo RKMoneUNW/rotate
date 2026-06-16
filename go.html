@@ -5,12 +5,12 @@
     <title>中转器</title>
 </head>
 <body>
-    <div style="padding: 20px; font-family: sans-serif; color: #666; text-align: center; margin-top: 20vh;">
-        <h2>正在解析复合制式并加载网页...</h2>
+    <div id="status-container" style="padding: 20px; font-family: sans-serif; color: #666; text-align: center; margin-top: 20vh;">
+        <h2 id="status-text">正在解析复合制式并加载网页...</h2>
         <p id="tip" style="font-size: 14px; color: #999; margin-top: 10px; white-space: pre-line; line-height: 1.6;"></p>
     </div>
 
-    <div id="error-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:99999; justify-content:center; align-items:center; color:#fff; padding:20px;">
+    <div id="error-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:99999; justify-content:center; align-items:center; color:#fff; padding:20px;">
         <div style="background:#222; padding:30px; border-radius:20px; text-align:center; max-width:80%; border:1px solid #444;">
             <h2 style="color:#ff4757; margin-bottom:15px;">不支持</h2>
             <p style="margin-bottom:20px; font-size:16px;">不支持http链接，仅支持https链接</p>
@@ -21,11 +21,22 @@
                 <p style="color:#51cf66; display:inline;">https</p><p style="display:inline;">://sr.mihoyo.com/news/123670?nav=news</p>
                 <p style="color:#aaa;">支持</p>
             </div>
-            <button onclick="document.getElementById('error-modal').style.display='none'" style="margin-top:20px; padding:10px 30px; border-radius:10px; border:none; background:#007fff; color:#fff; font-weight:bold; cursor:pointer;">我知道了</button>
+            <button onclick="hideError()" style="margin-top:20px; padding:10px 30px; border-radius:10px; border:none; background:#007fff; color:#fff; font-weight:bold; cursor:pointer;">我知道了</button>
         </div>
     </div>
 
     <script>
+        function showError() {
+            document.getElementById('error-modal').style.display = 'flex';
+            document.getElementById('status-container').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('error-modal').style.display = 'none';
+            document.getElementById('status-container').style.display = 'block';
+            document.getElementById('status-text').textContent = "解析已中止";
+        }
+
         (function() {
             const searchStr = window.location.search;
             if (!searchStr) {
@@ -45,7 +56,7 @@
                 }
 
                 if (!/^https:\/\//i.test(targetUrl)) {
-                    document.getElementById('error-modal').style.display = 'flex';
+                    showError();
                     return;
                 }
 
@@ -84,7 +95,7 @@
                 const plainUrl = decodedSearch.substring(1);
                 if (plainUrl) {
                     if (!/^https:\/\//i.test(plainUrl)) {
-                        document.getElementById('error-modal').style.display = 'flex';
+                        showError();
                         return;
                     }
                     window.location.href = `./index.html?url=${encodeURIComponent(plainUrl)}`;
