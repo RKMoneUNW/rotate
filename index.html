@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>网页旋转器</title>
+    <meta name="description" content="用以翻转网页 页面显示效果的网站，可以强制全屏显示，并根据视觉角度左旋、右旋，甚至是倒置和翻转">
+    <meta name="keywords" content="翻转，旋转，中文, 國語, 无障碍，显示器，显示效果">
+    <style>
+    /*  快板断阴阳，遥看生死两茫茫
+        镜中闪着银花草，透着故国花香  */ 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            position: relative;
+        }
+
+        #stage {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 网页独立旋转宿主 */
+        #scroller-wrapper {
+            position: absolute;
+            transition: transform 0.4s cubic-bezier(0.1, 0.8, 0.3, 1), width 0.4s, height 0.4s, top 0.4s, left 0.4s;
+            transform-origin: center center;
+            z-index: 1;
+        }
+
+        #iframe-viewport-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-origin: top left;
+            transition: transform 0.3s;
+        }
+
+        #web-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff;
+            display: block;
+        }
+
+        /* 菜单锚定空间：只跟随纯粹的旋转，绝不参与翻转的以毒攻毒180度 */
+        #menu-space-anchor {
+            position: absolute;
+            transition: transform 0.4s cubic-bezier(0.1, 0.8, 0.3, 1), width 0.4s, height 0.4s, top 0.4s, left 0.4s;
+            transform-origin: center center;
+            pointer-events: none; 
+            z-index: 9990;
+        }
+
+        /* --- 静止全高亮反色小撬棍 --- */
+        #sidebar-trigger {
+            position: absolute;
+            width: 14px;
+            height: 55px;
+            right: 0;
+            top: 75%; 
+            transform: translateY(-50%);
+            cursor: pointer;
+            user-select: none;
+            z-index: 9999; 
+            
+            mix-blend-mode: difference !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            
+            border-radius: 12px 0 0 12px; 
+            box-shadow: -2px 0 8px rgba(255,255,255,0.3);
+            pointer-events: auto; 
+            display: block !important;
+            visibility: visible !important;
+            transition: width 0.2s, opacity 0.3s;
+        }
+        
+        #sidebar-trigger:active {
+            width: 20px;
+        }
+
+        .hide-trigger {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+        }
+
+        @keyframes trigger-wake-blink {
+            0%, 100% { opacity: 1; transform: translateY(-50%) scaleX(1); }
+            50% { opacity: 0.1; transform: translateY(-50%) scaleX(0.4); }
+        }
+        .blink-active {
+            animation: trigger-wake-blink 0.35s ease-in-out 3;
+        }
+
+        /* --- 极致通透毛玻璃控制面板 --- */
+        #control-card {
+            position: absolute;
+            bottom: 20px; 
+            left: 50%;
+            width: 92%;
+            max-width: 420px; 
+            
+            background: rgba(15, 15, 15, 0.45); 
+            backdrop-filter: blur(25px) saturate(210%);
+            -webkit-backdrop-filter: blur(25px) saturate(210%);
+            
+            border-radius: 24px;
+            padding: 0; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.12);
+            overflow: hidden;
+            pointer-events: auto; 
+            
+            transition: transform 0.4s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.4s cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
+
+        .input-area-blend {
+            display: flex;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.25);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
+            align-items: flex-end;
+            padding: 8px 12px;
+        }
+
+        textarea#url-input {
+            flex: 1;
+            height: 38px;
+            min-height: 38px;
+            max-height: 120px;
+            padding: 9px 4px;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            font-family: sans-serif;
+            overflow-y: auto;
+            line-height: 20px;
+            display: block;
+            white-space: pre-wrap;
+            word-break: break-all;
+            transition: height 0.1s ease;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4); 
+        }
+        textarea#url-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        #go-btn {
+            padding: 8px 14px;
+            height: 38px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 1px;
+            font-weight: bold;
+            cursor: pointer;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        #go-btn:active {
+            background: #007fff;
+            border-color: #007fff;
+        }
+
+        .control-core-pad {
+            padding: 16px;
+        }
+
+        .status-row-centered {
+            display: flex;
+            align-items: center;
+            justify-content: center; 
+            gap: 8px;
+            margin-bottom: 14px;
+            width: 100%;
+        }
+        .view-status-label {
+            font-size: 13px; 
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: bold;
+            white-space: nowrap;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+            line-height: 1;
+        }
+        
+        button.action-btn {
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.12); 
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 13px; 
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: background 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(255,255,255,0.04);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        }
+        button.action-btn:active {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        
+        .unified-grid-menu {
+            display: flex;
+            flex-direction: row; 
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px; 
+            margin-bottom: 16px;
+            width: 100%;
+        }
+
+        .unified-grid-menu button.action-btn {
+            flex: 1;
+            padding: 13px 0px; 
+            text-align: center;
+        }
+
+        .status-row-centered button.action-btn {
+            padding: 12px 14px;
+        }
+        
+        button#view-toggle-btn.pc-active {
+            background: rgba(40, 167, 69, 0.6);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+            border-color: rgba(40, 167, 69, 0.4);
+        }
+        button#view-toggle-btn.m-active {
+            background: rgba(0, 127, 255, 0.6);
+            box-shadow: 0 4px 12px rgba(0, 127, 255, 0.2);
+            border-color: rgba(0, 127, 255, 0.4);
+        }
+        
+        .full-width-btn {
+            width: 100%;
+            background: rgba(220, 53, 69, 0.6) !important;
+            padding: 14px !important;
+            border-color: rgba(220, 53, 69, 0.4) !important;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.15);
+        }
+
+        body.true-fullscreen #stage {
+            width: 100vw;
+            height: 107vh; 
+            top: -3.5vh; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="stage">
+        
+        <div id="sidebar-trigger"></div>
+
+        <div id="scroller-wrapper">
+            <div id="iframe-viewport-container">
+                <iframe id="web-frame" src="http://www.itxpower.net/gsxw-14518.htm"></iframe>
+            </div>
+        </div>
+
+        <div id="menu-space-anchor">
+            
+            <div id="control-card">
+                <div class="input-area-blend">
+                    <textarea id="url-input" placeholder="输入网址并点击进入..."></textarea>
+                    <button id="go-btn">进入</button>
+                </div>
+                
+                <div class="control-core-pad">
+                    <div class="status-row-centered">
+                        <div class="view-status-label">当前网页视图：</div>
+                        <button id="view-toggle-btn" class="action-btn pc-active">桌面版视图</button>
+                    </div>
+
+                    <div class="unified-grid-menu">
+                        <button class="action-btn" id="reset-btn">原样</button>
+                        <button class="action-btn mode-btn" data-action="left">左旋</button>
+                        <button class="action-btn mode-btn" data-action="right">右旋</button>
+                        <button class="action-btn mode-btn" data-action="rotate180">倒置</button>
+                        <button class="action-btn mode-btn" data-action="flipV">翻转</button>
+                    </div>
+                    
+                    <button id="fullscreen-btn" class="action-btn full-width-btn">强制沉浸全屏</button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const doc = document;
+        const stage = doc.getElementById('stage');
+        const wrapper = doc.getElementById('scroller-wrapper');
+        const anchor = doc.getElementById('menu-space-anchor');
+        const vpContainer = doc.getElementById('iframe-viewport-container');
+        const webFrame = doc.getElementById('web-frame');
+        const sidebarTrigger = doc.getElementById('sidebar-trigger');
+        const controlCard = doc.getElementById('control-card');
+        const urlInput = doc.getElementById('url-input');
+        const goBtn = doc.getElementById('go-btn');
+        const viewToggleBtn = doc.getElementById('view-toggle-btn');
+        const fullscreenBtn = doc.getElementById('fullscreen-btn');
+        const modeButtons = doc.querySelectorAll('.mode-btn');
+        const resetBtn = doc.getElementById('reset-btn');
+
+        // 核心寄存器
+        let currentRotation = 0; // 网页实际的总角度
+        let isFlipped = false;    
+        let isPcView = true; 
+        let isMenuOpen = false; 
+
+        // 1. 撬棍显隐控制
+        sidebarTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isMenuOpen) closeMenu();
+            else openMenu();
+        });
+
+        doc.addEventListener('touchstart', (e) => {
+            if(!controlCard.contains(e.target) && e.target !== sidebarTrigger && isMenuOpen) {
+                closeMenu();
+            }
+        }, {passive: true});
+
+        function openMenu() {
+            isMenuOpen = true;
+            syncCardTransform();
+        }
+
+        function closeMenu() {
+            isMenuOpen = false;
+            syncCardTransform();
+        }
+
+        urlInput.addEventListener('input', () => {
+            urlInput.style.height = '38px';
+            const sHeight = urlInput.scrollHeight;
+            if(sHeight > 38) urlInput.style.height = sHeight + 'px';
+        });
+
+        function triggerStaplerBlink() {
+            sidebarTrigger.classList.remove('blink-active');
+            void sidebarTrigger.offsetWidth; 
+            sidebarTrigger.classList.add('blink-active');
+        }
+        webFrame.addEventListener('load', triggerStaplerBlink);
+
+        // 2. 菜单面板同步器：只管菜单正常弹入弹出，不再理会网页的以毒攻毒翻转
+        function syncCardTransform() {
+            let transY = isMenuOpen ? "translateY(0) scale(1)" : "translateY(calc(100% + 40px)) scale(0.95)";
+            let opac = isMenuOpen ? "1" : "0";
+            let pe = isMenuOpen ? "auto" : "none";
+
+            controlCard.style.transform = `translateX(-50%) ${transY}`;
+            controlCard.style.opacity = opac;
+            controlCard.style.pointerEvents = pe;
+        }
+
+        // 3. 核心解耦物理渲染引擎
+        function updateLayout() {
+            const stageW = stage.clientWidth;
+            const stageH = stage.clientHeight;
+
+            // 网页的最终视效旋转度
+            let webRotation = (currentRotation % 360 + 360) % 360;
+            // 菜单应该面向的旋转度（排除掉翻转带来的那层以毒攻毒倒置）
+            let menuRotation = webRotation;
+            if (isFlipped) {
+                menuRotation = ((webRotation - 180) % 360 + 360) % 360;
+            }
+
+            const isSwapped = (webRotation === 90 || webRotation === 270);
+            let targetW = isSwapped ? stageH : stageW;
+            let targetH = isSwapped ? stageW : stageH;
+
+            // --- 网页渲染矩阵 (包含以毒攻毒) ---
+            let webTransformStr = `rotate(${webRotation}deg)`;
+            if (isFlipped) {
+                webTransformStr += " scaleY(-1)";
+            }
+            wrapper.style.width = targetW + 'px';
+            wrapper.style.height = targetH + 'px';
+            wrapper.style.top = (stageH - targetH) / 2 + 'px';
+            wrapper.style.left = (stageW - targetW) / 2 + 'px';
+            wrapper.style.transform = webTransformStr;
+
+            // --- 菜单锚定空间渲染矩阵 (剔除倒置干扰，永远朝正) ---
+            const isMenuSwapped = (menuRotation === 90 || menuRotation === 270);
+            let menuW = isMenuSwapped ? stageH : stageW;
+            let menuH = isMenuSwapped ? stageW : stageH;
+            
+            anchor.style.width = menuW + 'px';
+            anchor.style.height = menuH + 'px';
+            anchor.style.top = (stageH - menuH) / 2 + 'px';
+            anchor.style.left = (stageW - menuW) / 2 + 'px';
+            anchor.style.transform = `rotate(${menuRotation}deg)`;
+
+            // 视口桌面版控制
+            if (isPcView) {
+                const pcWidth = 1366; 
+                const pcHeight = (targetH / targetW) * pcWidth; 
+                vpContainer.style.width = pcWidth + 'px';
+                vpContainer.style.height = pcHeight + 'px';
+                const scaleRatio = targetW / pcWidth;
+                vpContainer.style.transform = `scale(${scaleRatio})`;
+            } else {
+                vpContainer.style.width = '100%';
+                vpContainer.style.height = '100%';
+                vpContainer.style.transform = 'scale(1)';
+            }
+
+            syncCardTransform();
+        }
+
+        // 4. 动作计算中心
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.getAttribute('data-action');
+
+                if (action === 'left') {
+                    currentRotation += 90; 
+                } else if (action === 'right') {
+                    currentRotation -= 90; 
+                } else if (action === 'rotate180') {
+                    currentRotation += 180;
+                } else if (action === 'flipV') {
+                    // 完美的以毒攻毒组合拳
+                    isFlipped = !isFlipped;
+                    currentRotation += 180;
+                }
+
+                updateLayout();
+            });
+        });
+
+        // 5. 原样复位
+        resetBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentRotation = 0;
+            isFlipped = false;
+            updateLayout();
+            closeMenu();
+        });
+
+        // 6. 视图切换
+        viewToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isPcView = !isPcView;
+            if(isPcView) {
+                viewToggleBtn.textContent = "桌面版视图";
+                viewToggleBtn.className = "action-btn pc-active";
+            } else {
+                viewToggleBtn.textContent = "移动版视图";
+                viewToggleBtn.className = "action-btn m-active";
+            }
+            updateLayout();
+            closeMenu();
+        });
+
+        window.addEventListener('resize', () => {
+            setTimeout(updateLayout, 50);
+        });
+
+        // 7. 网址加载
+        function loadUrl() {
+            let url = urlInput.value.trim();
+            if(!url) return;
+            if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+            webFrame.src = url;
+            closeMenu();
+        }
+        goBtn.addEventListener('click', loadUrl);
+        urlInput.addEventListener('keydown', (e) => { 
+            if (e.key === 'Enter' && !e.shiftKey) { 
+                e.preventDefault(); 
+                loadUrl(); 
+            } 
+        });
+
+        // 8. 全屏系统
+        function toggleFullscreen(goFull) {
+            if (goFull) {
+                doc.body.classList.add('true-fullscreen');
+                sidebarTrigger.classList.add('hide-trigger'); 
+                if (doc.documentElement.requestFullscreen) doc.documentElement.requestFullscreen();
+                else if (doc.documentElement.webkitRequestFullscreen) doc.documentElement.webkitRequestFullscreen();
+            } else {
+                doc.body.classList.remove('true-fullscreen');
+                sidebarTrigger.classList.remove('hide-trigger'); 
+                if (doc.exitFullscreen) doc.exitFullscreen();
+                else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+            }
+            setTimeout(updateLayout, 300);
+        }
+
+        fullscreenBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isFull = doc.fullscreenElement || doc.webkitFullscreenElement;
+            toggleFullscreen(!isFull);
+            closeMenu();
+        });
+
+        doc.addEventListener('fullscreenchange', () => {
+            const isFull = doc.fullscreenElement || doc.webkitFullscreenElement;
+            if(!isFull) {
+                doc.body.classList.remove('true-fullscreen');
+                sidebarTrigger.classList.remove('hide-trigger');
+            }
+            fullscreenBtn.textContent = isFull ? "退出沉浸全屏" : "强制沉浸全屏";
+        });
+
+        // 9. 双指全屏手势
+        let lastInTime = 0, lastOutTime = 0, lastDist = 0;
+        doc.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                lastDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        }, { passive: true });
+
+        doc.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                const curDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const diff = curDist - lastDist;
+                const now = Date.now();
+
+                if (Math.abs(diff) > 20) {
+                    if (diff < 0) {
+                        if (now - lastInTime < 400 && now - lastInTime > 100) toggleFullscreen(false);
+                        lastInTime = now;
+                    } else {
+                        if (now - lastOutTime < 400 && now - lastOutTime > 100) toggleFullscreen(true);
+                        lastOutTime = now;
+                    }
+                    lastDist = curDist;
+                }
+            }
+        }, { passive: true });
+        
+        updateLayout();
+        setTimeout(triggerStaplerBlink, 600);
+    </script>
+</body>
+</html>
