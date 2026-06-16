@@ -1,2 +1,2 @@
-# rotate
-rotate
+# 网页旋转器
+仅支持https链接
