@@ -7,7 +7,7 @@
     <meta name="description" content="用以翻转网页 页面显示效果的网站，可以强制全屏显示，并根据视觉角度左旋、右旋，甚至是倒置和翻转">
     <meta name="keywords" content="翻转，旋转，中文, 國語, 无障碍，显示器，显示效果">
     <style>
-    /*  快板断阴阳，遥看生死两茫茫
+    /* 快板断阴阳，遥看生死两茫茫
         镜中闪着银花草，透着故国花香  */ 
         * {
             box-sizing: border-box;
@@ -29,7 +29,6 @@
             overflow: hidden;
         }
 
-        /* 网页独立旋转宿主 */
         #scroller-wrapper {
             position: absolute;
             transition: transform 0.4s cubic-bezier(0.1, 0.8, 0.3, 1), width 0.4s, height 0.4s, top 0.4s, left 0.4s;
@@ -53,7 +52,6 @@
             display: block;
         }
 
-        /* 菜单锚定空间：只跟随纯粹的旋转，绝不参与翻转的以毒攻毒180度 */
         #menu-space-anchor {
             position: absolute;
             transition: transform 0.4s cubic-bezier(0.1, 0.8, 0.3, 1), width 0.4s, height 0.4s, top 0.4s, left 0.4s;
@@ -62,7 +60,6 @@
             z-index: 9990;
         }
 
-        /* --- 静止全高亮反色小撬棍 --- */
         #sidebar-trigger {
             position: absolute;
             width: 14px;
@@ -103,7 +100,6 @@
             animation: trigger-wake-blink 0.35s ease-in-out 3;
         }
 
-        /* --- 极致通透毛玻璃控制面板 --- */
         #control-card {
             position: absolute;
             bottom: 20px; 
@@ -278,7 +274,7 @@
             <div id="control-card">
                 <div class="input-area-blend">
                     
-                    <textarea id="url-input" placeholder="输入网址并点击进入... "></textarea>
+                    <textarea id="url-input" placeholder="输入网址并点击进入... &#10;(仅支持https链接) &#10;   &#10;(某些https网站可能会拦截访问，您可以下载此网页，并在下载后的网页文件中删去浏览器附加的跳转头，再使用浏览器打开进行本地运行与使用) "></textarea>
                     <button id="go-btn">进入</button>
                 </div>
                 
@@ -320,13 +316,32 @@
         const modeButtons = doc.querySelectorAll('.mode-btn');
         const resetBtn = doc.getElementById('reset-btn');
 
-        // 核心寄存器
-        let currentRotation = 0; // 网页实际的总角度
+        let currentRotation = 0; 
         let isFlipped = false;    
         let isPcView = true; 
         let isMenuOpen = false; 
+        
+        const fakeMenu = doc.createElement('div');
+        fakeMenu.id = 'fake-system-menu';
+        fakeMenu.style.cssText = "position:absolute; top:-100%; left:0; width:100%; height:80%; background:#141414; z-index:99999; transition:top 0.3s cubic-bezier(0.1, 0.8, 0.3, 1); pointer-events:auto; padding:20px; color:#fff; font-family:sans-serif; box-shadow:0 15px 30px rgba(0,0,0,0.5);";
+        fakeMenu.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:30px; font-size:14px;"><span>15:44</span><span>📶 🔋 100%</span></div><div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:15px; text-align:center; font-size:12px;"><div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:15px;">WLAN</div><div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:15px;">蓝牙</div><div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:15px;">手电筒</div><div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:15px;">自动旋转</div></div>`;
+        stage.appendChild(fakeMenu);
 
-        // 1. 撬棍显隐控制
+        let startY = 0;
+        const handleTouchStart = (e) => { startY = e.touches[0].clientY; };
+        const handleTouchMove = (e) => {
+            let moveY = e.touches[0].clientY;
+            if ((currentRotation % 360 === 180 || currentRotation % 360 === -180) && (startY - moveY > 80)) {
+                fakeMenu.style.top = '0';
+            }
+        };
+
+        doc.addEventListener('touchstart', (e) => {
+            if (fakeMenu.style.top === '0px' && !fakeMenu.contains(e.target)) {
+                fakeMenu.style.top = '-100%';
+            }
+        }, {passive: true});
+
         sidebarTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
             if (isMenuOpen) closeMenu();
@@ -362,7 +377,6 @@
         }
         webFrame.addEventListener('load', triggerStaplerBlink);
 
-        // 2. 菜单面板同步器：只管菜单正常弹入弹出，不再理会网页的以毒攻毒翻转
         function syncCardTransform() {
             let transY = isMenuOpen ? "translateY(0) scale(1)" : "translateY(calc(100% + 40px)) scale(0.95)";
             let opac = isMenuOpen ? "1" : "0";
@@ -373,14 +387,11 @@
             controlCard.style.pointerEvents = pe;
         }
 
-        // 3. 核心解耦物理渲染引擎
         function updateLayout() {
             const stageW = stage.clientWidth;
             const stageH = stage.clientHeight;
 
-            // 网页的最终视效旋转度
             let webRotation = (currentRotation % 360 + 360) % 360;
-            // 菜单应该面向的旋转度（排除掉翻转带来的那层以毒攻毒倒置）
             let menuRotation = webRotation;
             if (isFlipped) {
                 menuRotation = ((webRotation - 180) % 360 + 360) % 360;
@@ -390,7 +401,6 @@
             let targetW = isSwapped ? stageH : stageW;
             let targetH = isSwapped ? stageW : stageH;
 
-            // --- 网页渲染矩阵 (包含以毒攻毒) ---
             let webTransformStr = `rotate(${webRotation}deg)`;
             if (isFlipped) {
                 webTransformStr += " scaleY(-1)";
@@ -401,7 +411,6 @@
             wrapper.style.left = (stageW - targetW) / 2 + 'px';
             wrapper.style.transform = webTransformStr;
 
-            // --- 菜单锚定空间渲染矩阵 (剔除倒置干扰，永远朝正) ---
             const isMenuSwapped = (menuRotation === 90 || menuRotation === 270);
             let menuW = isMenuSwapped ? stageH : stageW;
             let menuH = isMenuSwapped ? stageW : stageH;
@@ -412,7 +421,6 @@
             anchor.style.left = (stageW - menuW) / 2 + 'px';
             anchor.style.transform = `rotate(${menuRotation}deg)`;
 
-            // 视口桌面版控制
             if (isPcView) {
                 const pcWidth = 1366; 
                 const pcHeight = (targetH / targetW) * pcWidth; 
@@ -429,7 +437,6 @@
             syncCardTransform();
         }
 
-        // 4. 动作计算中心
         modeButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -440,9 +447,16 @@
                 } else if (action === 'right') {
                     currentRotation -= 90; 
                 } else if (action === 'rotate180') {
-                    currentRotation += 180;
+                    currentRotation = 0;
+                    if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
+                        toggleFullscreen(true);
+                    }
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('portrait-secondary').catch(() => {});
+                    }
+                    updateLayout();
+                    closeMenu();
                 } else if (action === 'flipV') {
-                    // 完美的以毒攻毒组合拳
                     isFlipped = !isFlipped;
                     currentRotation += 180;
                 }
@@ -451,16 +465,15 @@
             });
         });
 
-        // 5. 原样复位
         resetBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             currentRotation = 0;
             isFlipped = false;
             updateLayout();
             closeMenu();
+            if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
         });
 
-        // 6. 视图切换
         viewToggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             isPcView = !isPcView;
@@ -479,7 +492,6 @@
             setTimeout(updateLayout, 50);
         });
 
-        // 7. 网址加载
         function loadUrl() {
             let url = urlInput.value.trim();
             if(!url) return;
@@ -495,7 +507,6 @@
             } 
         });
 
-        // 8. 全屏系统
         function toggleFullscreen(goFull) {
             if (goFull) {
                 doc.body.classList.add('true-fullscreen');
@@ -527,7 +538,6 @@
             fullscreenBtn.textContent = isFull ? "退出沉浸全屏" : "强制沉浸全屏";
         });
 
-        // 9. 双指全屏手势
         let lastInTime = 0, lastOutTime = 0, lastDist = 0;
         doc.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
