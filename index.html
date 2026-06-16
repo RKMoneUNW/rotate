@@ -429,7 +429,10 @@
             if (offsetY !== 0) params.set('dy', offsetY);
             if (scaleSize !== 1.0) params.set('sz', scaleSize);
             params.set('url', encodeURIComponent(webFrame.src));
-            window.history.replaceState(null, '', window.location.pathname + '?' + params.toString());
+            
+            /* 修正方案：获取当前目录路径而非文件名，使链接自动规范化 */
+            let cleanPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+            window.history.replaceState(null, '', cleanPath + '?' + params.toString());
         }
 
         modeButtons.forEach(btn => {
@@ -449,8 +452,12 @@
                     if (screen.orientation && screen.orientation.lock) {
                         screen.orientation.lock('portrait-secondary').catch(() => {});
                     }
+                    
+                    /* 修正方案：强制先关闭菜单并立即重绘，不再依赖调度 */
+                    isMenuOpen = false;
+                    syncCardTransform();
                     updateLayout();
-                    closeMenu();
+                    return;
                 } else if (action === 'flipV') {
                     isFlipped = !isFlipped;
                     currentRotation += 180;
