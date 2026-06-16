@@ -26,6 +26,8 @@
     </div>
 
     <script>
+        let isPcView = true;
+
         function showError() {
             document.getElementById('error-modal').style.display = 'flex';
             document.getElementById('status-container').style.display = 'none';
@@ -45,7 +47,7 @@
             }
             const decodedSearch = decodeURIComponent(searchStr);
 
-            const match = decodedSearch.match(/^\?=([A-Z¥]+)&(.*)$/i);
+            const match = decodedSearch.match(/^\?=([A-Z¥ƵҰ]+)&(.*)$/i);
 
             if (match) {
                 const commands = match[1].toUpperCase();
@@ -82,15 +84,21 @@
                         r_ang = 0;
                         r_flip = 0;
                         parsedTexts.push("强制复位原样");
+                    } else if (cmd === 'Ƶ') {
+                        isPcView = true;
+                        parsedTexts.push("桌面版视图");
+                    } else if (cmd === 'Ұ') {
+                        isPcView = false;
+                        parsedTexts.push("移动版视图");
                     }
                 }
 
                 r_ang = (r_ang % 360 + 360) % 360;
 
                 document.getElementById('tip').textContent = 
-                    `动作叠加：${parsedTexts.join(' ➔ ')}\n最终状态：角度 ${r_ang}° / 翻转 ${r_flip === 1 ? '开' : '关'}\n目标网页：${targetUrl}`;
+                    `动作叠加：${parsedTexts.join(' ➔ ')}\n最终状态：角度 ${r_ang}° / 翻转 ${r_flip === 1 ? '开' : '关'} / 视图 ${isPcView ? '桌面版' : '移动版'}\n目标网页：${targetUrl}`;
 
-                window.location.href = `./index.html?ang=${r_ang}&flip=${r_flip}&url=${encodeURIComponent(targetUrl)}`;
+                window.location.href = `./index.html?ang=${r_ang}&flip=${r_flip}&view=${isPcView ? 'pc' : 'm'}&url=${encodeURIComponent(targetUrl)}`;
             } else {
                 const plainUrl = decodedSearch.substring(1);
                 if (plainUrl) {
