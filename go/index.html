@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>中转器</title>
+</head>
+<body>
+    <div id="status-container" style="padding: 20px; font-family: sans-serif; color: #666; text-align: center; margin-top: 20vh;">
+        <h2 id="status-text">正在解析复合制式并加载网页...</h2>
+        <p id="tip" style="font-size: 14px; color: #999; margin-top: 10px; white-space: pre-line; line-height: 1.6;"></p>
+    </div>
+
+    <div id="error-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:99999; justify-content:center; align-items:center; color:#fff; padding:20px;">
+        <div style="background:#222; padding:30px; border-radius:20px; text-align:center; max-width:80%; border:1px solid #444;">
+            <h2 style="color:#ff4757; margin-bottom:15px;">不支持</h2>
+            <p style="margin-bottom:20px; font-size:16px;">不支持http链接，仅支持https链接</p>
+            <div style="background:#000; padding:15px; border-radius:10px; text-align:left; font-size:14px; font-family:monospace;">
+                <p>例：</p>
+                <p style="color:#ff6b6b; display:inline;">http</p><p style="display:inline;">://www.itxpower.net/gsxw-14518.htm</p>
+                <p style="color:#aaa; margin-bottom:10px;">不支持</p>
+                <p style="color:#51cf66; display:inline;">https</p><p style="display:inline;">://sr.mihoyo.com/news/123670?nav=news</p>
+                <p style="color:#aaa;">支持</p>
+            </div>
+            <button onclick="hideError()" style="margin-top:20px; padding:10px 30px; border-radius:10px; border:none; background:#007fff; color:#fff; font-weight:bold; cursor:pointer;">我知道了</button>
+        </div>
+    </div>
+
+    <script>
+        let isPcView = true;
+
+        function showError() {
+            document.getElementById('error-modal').style.display = 'flex';
+            document.getElementById('status-container').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('error-modal').style.display = 'none';
+            document.getElementById('status-container').style.display = 'block';
+            document.getElementById('status-text').textContent = "解析已中止";
+        }
+
+        (function() {
+            const searchStr = window.location.search;
+            if (!searchStr) {
+                window.location.href = "../";
+                return;
+            }
+            const decodedSearch = decodeURIComponent(searchStr);
+
+            const match = decodedSearch.match(/^\?=([A-Z¥ƵҰ]+)&(.*)$/i);
+
+            if (match) {
+                const commands = match[1].toUpperCase();
+                let targetUrl = match[2];
+
+                if (!/^https?:\/\//i.test(targetUrl)) {
+                    targetUrl = 'https://' + targetUrl;
+                }
+
+                if (!/^https:\/\//i.test(targetUrl)) {
+                    showError();
+                    return;
+                }
+
+                let r_ang = 0;
+                let r_flip = 0;
+                let parsedTexts = [];
+
+                for (let i = 0; i < commands.length; i++) {
+                    const cmd = commands[i];
+                    if (cmd === 'Z') {
+                        r_ang += 90;
+                        parsedTexts.push("左旋(+90°)");
+                    } else if (cmd === 'Y') {
+                        r_ang -= 90;
+                        parsedTexts.push("右旋(-90°)");
+                    } else if (cmd === 'D') {
+                        r_ang += 180;
+                        parsedTexts.push("倒置(+180°)");
+                    } else if (cmd === 'F') {
+                        r_flip = r_flip === 1 ? 0 : 1; 
+                        parsedTexts.push("垂直翻转");
+                    } else if (cmd === '¥') {
+                        r_ang = 0;
+                        r_flip = 0;
+                        parsedTexts.push("强制复位原样");
+                    } else if (cmd === 'Ƶ') {
+                        isPcView = true;
+                        parsedTexts.push("桌面版视图");
+                    } else if (cmd === 'Ұ') {
+                        isPcView = false;
+                        parsedTexts.push("移动版视图");
+                    }
+                }
+
+                r_ang = (r_ang % 360 + 360) % 360;
+
+                document.getElementById('tip').textContent = 
+                    `动作叠加：${parsedTexts.join(' ➔ ')}\n最终状态：角度 ${r_ang}° / 翻转 ${r_flip === 1 ? '开' : '关'} / 视图 ${isPcView ? '桌面版' : '移动版'}\n目标网页：${targetUrl}`;
+
+                window.location.href = `../?ang=${r_ang}&flip=${r_flip}&view=${isPcView ? 'pc' : 'm'}&url=${encodeURIComponent(targetUrl)}`;
+            } else {
+                const plainUrl = decodedSearch.substring(1);
+                if (plainUrl) {
+                    if (!/^https:\/\//i.test(plainUrl)) {
+                        showError();
+                        return;
+                    }
+                    window.location.href = `../?url=${encodeURIComponent(plainUrl)}`;
+                } else {
+                    window.location.href = "../";
+                }
+            }
+        })();
+    </script>
+</body>
+</html>
