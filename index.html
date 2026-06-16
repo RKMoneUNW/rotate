@@ -579,12 +579,24 @@
             const paramDy = urlParams.get('dy');
             const paramSz = urlParams.get('sz');
 
-            if (paramAng !== null) currentRotation = parseInt(paramAng, 10) || 0;
-            if (paramFlip !== null) isFlipped = (paramFlip === '1');
-            if (paramDx !== null) offsetX = parseInt(paramDx, 10) || 0;
-            if (paramDy !== null) offsetY = parseInt(paramDy, 10) || 0;
-            if (paramSz !== null) scaleSize = parseFloat(paramSz) || 1.0;
-            if (paramUrl) webFrame.src = decodeURIComponent(paramUrl);
+            if (paramAng !== null) {
+                currentRotation = parseInt(paramAng, 10) || 0;
+            }
+            if (paramFlip !== null) {
+                isFlipped = (paramFlip === '1');
+            }
+            if (paramDx !== null) {
+                offsetX = parseInt(paramDx, 10) || 0;
+            }
+            if (paramDy !== null) {
+                offsetY = parseInt(paramDy, 10) || 0;
+            }
+            if (paramSz !== null) {
+                scaleSize = parseFloat(paramSz) || 1.0;
+            }
+            if (paramUrl) {
+                webFrame.src = decodeURIComponent(paramUrl);
+            }
             
             if (paramView) {
                 isPcView = (paramView === 'pc');
