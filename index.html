@@ -320,6 +320,9 @@
         let isFlipped = false;    
         let isPcView = true; 
         let isMenuOpen = false; 
+        let offsetX = 0;
+        let offsetY = 0;
+        let scaleSize = 1.0;
         
         sidebarTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -380,14 +383,14 @@
             let targetW = isSwapped ? stageH : stageW;
             let targetH = isSwapped ? stageW : stageH;
 
-            let webTransformStr = `rotate(${webRotation}deg)`;
+            let webTransformStr = `rotate(${webRotation}deg) scale(${scaleSize})`;
             if (isFlipped) {
                 webTransformStr += " scaleY(-1)";
             }
             wrapper.style.width = targetW + 'px';
             wrapper.style.height = targetH + 'px';
-            wrapper.style.top = (stageH - targetH) / 2 + 'px';
-            wrapper.style.left = (stageW - targetW) / 2 + 'px';
+            wrapper.style.top = (stageH - targetH) / 2 + offsetY + 'px';
+            wrapper.style.left = (stageW - targetW) / 2 + offsetX + 'px';
             wrapper.style.transform = webTransformStr;
 
             const isMenuSwapped = (menuRotation === 90 || menuRotation === 270);
@@ -422,6 +425,9 @@
             if (currentRotation !== 0) params.set('ang', currentRotation);
             if (isFlipped !== false) params.set('flip', isFlipped ? '1' : '0');
             if (isPcView !== true) params.set('view', isPcView ? 'pc' : 'm');
+            if (offsetX !== 0) params.set('dx', offsetX);
+            if (offsetY !== 0) params.set('dy', offsetY);
+            if (scaleSize !== 1.0) params.set('sz', scaleSize);
             params.set('url', encodeURIComponent(webFrame.src));
             window.history.replaceState(null, '', window.location.pathname + '?' + params.toString());
         }
@@ -458,6 +464,9 @@
             e.stopPropagation();
             currentRotation = 0;
             isFlipped = false;
+            offsetX = 0;
+            offsetY = 0;
+            scaleSize = 1.0;
             updateLayout();
             closeMenu();
             if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
@@ -566,16 +575,16 @@
             const paramFlip = urlParams.get('flip');
             const paramUrl = urlParams.get('url');
             const paramView = urlParams.get('view');
+            const paramDx = urlParams.get('dx');
+            const paramDy = urlParams.get('dy');
+            const paramSz = urlParams.get('sz');
 
-            if (paramAng !== null) {
-                currentRotation = parseInt(paramAng, 10) || 0;
-            }
-            if (paramFlip !== null) {
-                isFlipped = (paramFlip === '1');
-            }
-            if (paramUrl) {
-                webFrame.src = decodeURIComponent(paramUrl);
-            }
+            if (paramAng !== null) currentRotation = parseInt(paramAng, 10) || 0;
+            if (paramFlip !== null) isFlipped = (paramFlip === '1');
+            if (paramDx !== null) offsetX = parseInt(paramDx, 10) || 0;
+            if (paramDy !== null) offsetY = parseInt(paramDy, 10) || 0;
+            if (paramSz !== null) scaleSize = parseFloat(paramSz) || 1.0;
+            if (paramUrl) webFrame.src = decodeURIComponent(paramUrl);
             
             if (paramView) {
                 isPcView = (paramView === 'pc');
